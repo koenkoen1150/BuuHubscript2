@@ -1,4 +1,4 @@
--- [[ Buu Hub v7.6 - Thaiban (Mobile Fly + Speed Box Edition) ]] --
+-- [[ Buu Hub v7.6 - Thaiban (Mobile Camera Fly Edition) ]] --
 local P = game:GetService("Players")
 local TS = game:GetService("TweenService")
 local RS = game:GetService("RunService")
@@ -41,10 +41,10 @@ local SG = Instance.new("ScreenGui", targetGui)
 SG.Name = "BuuHub_Short"
 SG.ResetOnSpawn = false
 
--- หน้าต่างหลัก (ขยายกว้าง 450 เพื่อแบ่ง 2 ฝั่งให้ชัดเจนและจิ้มง่ายบนมือถือ)
+-- หน้าต่างหลัก
 local MF = Instance.new("Frame", SG)
-MF.Size = UDim2.new(0, 450, 0, 310)
-MF.Position = UDim2.new(0.5, -225, 0.5, -155)
+MF.Size = UDim2.new(0, 450, 0, 250) -- ปรับขนาดลดความสูงลงมาเนื่องจากนำปุ่มขึ้นลงออกแล้ว
+MF.Position = UDim2.new(0.5, -225, 0.5, -125)
 MF.BackgroundColor3 = Color3.fromRGB(15,15,15)
 MF.BackgroundTransparency = 0.2
 Instance.new("UICorner", MF).CornerRadius = UDim.new(0, 10)
@@ -52,7 +52,7 @@ Instance.new("UICorner", MF).CornerRadius = UDim.new(0, 10)
 local TL = Instance.new("TextLabel", MF)
 TL.Size = UDim2.new(1, -50, 0, 35)
 TL.Position = UDim2.new(0, 15, 0, 5)
-TL.Text = "Buu Hub (Mobile Hub)"
+TL.Text = "Buu Hub (Mobile Camera Fly)"
 TL.TextColor3 = Color3.fromRGB(255,255,255)
 TL.TextSize = 20
 TL.Font = 4
@@ -98,9 +98,9 @@ local function walk(pos)
     task.wait(0.5)
 end
 
--- ================= ฝั่งซ้าย (ฟังก์ชันเดิมของคุณ) =================
+-- ================= ฝั่งซ้าย (ฟังก์ชันเดิม) =================
 
-btn("ตัดไม้ออโต้: ปิดอยู่", UDim2.new(0.04, 0, 0.16, 0), 200, function(b)
+btn("ตัดไม้ออโต้: ปิดอยู่", UDim2.new(0.04, 0, 0.20, 0), 200, function(b)
     fOn = not fOn 
     setUI(b, fOn and "ตัดไม้ออโต้: เปิดอยู่" or "ตัดไม้ออโต้: ปิดอยู่", fOn and Color3.fromRGB(0,150,255) or Color3.fromRGB(200,200,200))
     if fOn then 
@@ -125,14 +125,14 @@ btn("ตัดไม้ออโต้: ปิดอยู่", UDim2.new(0.04, 
     end
 end)
 
-btn("ทะลุกำแพง: ปิดอยู่", UDim2.new(0.04, 0, 0.32, 0), 200, function(b)
+btn("ทะลุกำแพง: ปิดอยู่", UDim2.new(0.04, 0, 0.40, 0), 200, function(b)
     ncOn = not ncOn 
     setUI(b, ncOn and "ทะลุกำแพง: เปิดอยู่" or "ทะลุกำแพง: ปิดอยู่", ncOn and Color3.fromRGB(0,150,255) or Color3.fromRGB(200,200,200))
 end)
 
 local SP = Instance.new("TextBox", MF)
 SP.Size = UDim2.new(0, 200, 0, 38)
-SP.Position = UDim2.new(0.04, 0, 0.48, 0)
+SP.Position = UDim2.new(0.04, 0, 0.60, 0)
 SP.BackgroundColor3 = Color3.fromRGB(30,30,30)
 SP.BackgroundTransparency = 0.3
 SP.PlaceholderText = "ใส่ความเร็วเดิน... (ปกติ 16)"
@@ -148,34 +148,34 @@ SP.FocusLost:Connect(function()
     end 
 end)
 
-btn("📍 บันทึกจุดพิกัดปัจจุบัน", UDim2.new(0.04, 0, 0.66, 0), 200, function(b)
+btn("📍 Save Pos", UDim2.new(0.04, 0, 0.80, 0), 95, function(b)
     if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then 
         savedCF = lp.Character.HumanoidRootPart.CFrame 
-        b.Text = "✅ บันทึกจุดสำเร็จ!" 
+        b.Text = "✅ Saved!" 
         b.TextColor3 = Color3.fromRGB(0,255,150) 
-        task.wait(1) 
-        b.Text = "📍 บันทึกจุดพิกัดปัจจุบัน" 
-        b.TextColor3 = Color3.fromRGB(255,215,0) 
+        task.wait(0.8) 
+        b.Text = "📍 Save Pos" 
+        b.TextColor3 = Color3.fromRGB(200,200,200) 
     end
 end)
 
-btn("🌀 วาร์ปกลับจุดที่เซ็ตไว้", UDim2.new(0.04, 0, 0.82, 0), 200, function(b)
+btn("🌀 Teleport", UDim2.new(0.27, 0, 0.80, 0), 95, function(b)
     if savedCF and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then 
         lp.Character.HumanoidRootPart.CFrame = savedCF 
     else 
-        b.Text = "❌ ยังไม่ได้เซ็ตจุด!" 
+        b.Text = "❌ No Pos!" 
         b.TextColor3 = Color3.fromRGB(255,100,100) 
-        task.wait(1) 
-        b.Text = "🌀 วาร์ปกลับจุดที่เซ็ตไว้" 
+        task.wait(0.8) 
+        b.Text = "🌀 Teleport" 
         b.TextColor3 = Color3.fromRGB(200,200,200) 
     end
 end)
 
 
--- ================= ฝั่งขวา (ระบบบินสำหรับมือถือ + ช่องใส่ความเร็ว) =================
+-- ================= ฝั่งขวา (ระบบบินตามกล้องสำหรับมือถือ) =================
 
 -- ปุ่มเปิด/ปิด บิน
-btn("บิน (Fly): ปิดอยู่", UDim2.new(0.52, 0, 0.16, 0), 200, function(b)
+btn("บิน (Fly): ปิดอยู่", UDim2.new(0.52, 0, 0.20, 0), 200, function(b)
     flyOn = not flyOn
     setUI(b, flyOn and "บิน (Fly): เปิดอยู่" or "บิน (Fly): ปิดอยู่", flyOn and Color3.fromRGB(0,150,255) or Color3.fromRGB(200,200,200))
 end)
@@ -183,11 +183,11 @@ end)
 -- ช่องใส่ค่าความเร็วในการบิน
 local FlySP = Instance.new("TextBox", MF)
 FlySP.Size = UDim2.new(0, 200, 0, 38)
-FlySP.Position = UDim2.new(0.52, 0, 0.32, 0)
+FlySP.Position = UDim2.new(0.52, 0, 0.40, 0)
 FlySP.BackgroundColor3 = Color3.fromRGB(30,30,30)
 FlySP.BackgroundTransparency = 0.3
-FlySP.PlaceholderText = "ใส่ความเร็วบิน... (ปกติ 30)"
-FlySP.Text = "30"
+FlySP.PlaceholderText = "ใส่ความเร็วบิน... (ปกติ 50)"
+FlySP.Text = "50"
 FlySP.TextColor3 = Color3.fromRGB(0,255,150)
 FlySP.Font = 4
 FlySP.TextSize = 14
@@ -197,37 +197,22 @@ FlySP.FocusLost:Connect(function()
     if tonumber(FlySP.Text) then
         flySpeed = tonumber(FlySP.Text)
     else
-        FlySP.Text = tostring(flySpeed) -- ถ้าไม่ใช่ตัวเลข ให้ดึงค่าเดิมกลับมาใส่
-    end
-end)
-
--- ปุ่มสำหรับกดบินขึ้น (จิ้มค้างไม่ได้ แต่กดรัวๆ เพื่อไต่ระดับได้ดีบนมือถือ)
-btn("บินขึ้น ↑", UDim2.new(0.52, 0, 0.52, 0), 200, function()
-    if flyOn and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-        lp.Character.HumanoidRootPart.CFrame = lp.Character.HumanoidRootPart.CFrame + Vector3.new(0, flySpeed/5, 0)
-    end
-end)
-
--- ปุ่มสำหรับกดบินลง
-btn("บินลง ↓", UDim2.new(0.52, 0, 0.68, 0), 200, function()
-    if flyOn and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-        lp.Character.HumanoidRootPart.CFrame = lp.Character.HumanoidRootPart.CFrame + Vector3.new(0, -flySpeed/5, 0)
+        FlySP.Text = tostring(flySpeed)
     end
 end)
 
 
--- ================= Loop ควบคุมตัวละคร =================
+-- ================= Loop ควบคุมตัวละครและการบินตามทิศกล้อง =================
 
 RS.Stepped:Connect(function() 
-    if ncOn and lp.Character then 
+    if (ncOn or flyOn) and lp.Character then 
         for _, p in ipairs(lp.Character:GetDescendants()) do 
             if p:IsA("BasePart") then p.CanCollide = false end 
         end 
-    elseif flyOn and lp.Character then
-        local hrp = lp.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then hrp.CanCollide = false end -- กันเตะพาร์ทเวลาลอยตัว
     end 
 end)
+
+local Camera = workspace.CurrentCamera
 
 RS.RenderStepped:Connect(function()
     if flyOn and lp.Character then
@@ -236,9 +221,18 @@ RS.RenderStepped:Connect(function()
         if hrp and hum then
             hrp.Velocity = Vector3.new(0, 0, 0) -- ล็อคไม่ให้ร่วงพื้น
             
-            -- บินไปตามทิศทางของ Joystick มือถือที่กดเดิน
+            -- ระบบคำนวณการเคลื่อนที่บินตามหน้าจอ (Camera-Relative)
             if hum.MoveDirection.Magnitude > 0 then
-                hrp.Position = hrp.Position + (hum.MoveDirection * (flySpeed / 50))
+                -- ดึงเวกเตอร์ทิศทางเดินของอนิเมชันปุ่มเดิน แล้วนำมาคูณกับทิศทางมุมกล้องจริงของหน้าจอมือถือ
+                local flyDirection = Camera.CFrame:VectorToWorldSpace(Vector3.new(hum.MoveDirection.X, 0, hum.MoveDirection.Z))
+                
+                -- หากผู้เล่นดันปุ่มเดินไปด้านหน้า (ค่าแกน Z ต่ำกว่า 0) ระบบจะอิงองศากล้อง LookVector เพื่อให้บินขึ้น/ลงตามการก้มเงยหน้าจอได้
+                if hum.MoveDirection.Z < 0 then
+                    hrp.Position = hrp.Position + (Camera.CFrame.LookVector * (flySpeed / 50))
+                else
+                    -- กรณีเดินถอยหลังหรือไปด้านข้าง ให้บินระนาบตามปกติแต่หมุนแกนตามหน้าจอ
+                    hrp.Position = hrp.Position + (flyDirection * (flySpeed / 50))
+                end
             end
         end
     end

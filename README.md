@@ -7,7 +7,7 @@ local lp = P.LocalPlayer
 
 local fOn, ncOn, savedCF = false, false, nil
 local flyOn = false
-local flySpeed = 50 -- ความเร็วบินเริ่มต้น
+local flySpeed = 30 -- ความเร็วบินเริ่มต้น
 
 local TreePos = {
     Vector3.new(186.08, 9.17, 227.97), 
@@ -186,8 +186,8 @@ FlySP.Size = UDim2.new(0, 200, 0, 38)
 FlySP.Position = UDim2.new(0.52, 0, 0.40, 0)
 FlySP.BackgroundColor3 = Color3.fromRGB(30,30,30)
 FlySP.BackgroundTransparency = 0.3
-FlySP.PlaceholderText = "ใส่ความเร็วบิน... (ปกติ 50)"
-FlySP.Text = "50"
+FlySP.PlaceholderText = "ใส่ความเร็วบิน... (ปกติ 30)"
+FlySP.Text = "30"
 FlySP.TextColor3 = Color3.fromRGB(0,255,150)
 FlySP.Font = 4
 FlySP.TextSize = 14

@@ -109,19 +109,19 @@ local function startFly()
     local hum = char:FindFirstChild("Humanoid")
     if not hrp or not hum then return end
 
-    -- ล็อกท่าเดิน: ปิดการทำงานสคริปต์อนิเมชันเดิมเพื่อไม่ให้แขนขาสะบัดตอนบิน
+    -- ล็อกท่าเดิน: ปิดสคริปต์อนิเมชันเพื่อล็อกตัวตรงตัวแข็ง
     local animateScript = char:FindFirstChild("Animate")
     if animateScript then
         oldAnimState = animateScript.Enabled
         animateScript.Enabled = false
     end
     
-    -- เคลียร์อนิเมชันเก่าๆ ที่ค้างอยู่ให้หยุดเล่นทั้งหมด (ตัวจะนิ่งตรง)
+    -- หยุดการขยับขาทุกอย่าง
     for _, track in ipairs(hum:GetPlayingAnimationTracks()) do
         track:Stop()
     end
 
-    -- สร้างแรงยกตัวและล็อกมุมตัวละครให้ตั้งตรงสไตล์ IY
+    -- ปรับแต่งแรงยกสไตล์ IY ให้มั่นคงสูง ไม่แกว่ง
     local bv = Instance.new("BodyVelocity", hrp)
     bv.Velocity = Vector3.new(0, 0, 0)
     bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
@@ -130,7 +130,7 @@ local function startFly()
     local bg = Instance.new("BodyGyro", hrp)
     bg.CFrame = hrp.CFrame
     bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    bg.P = 10000
+    bg.P = 15000 -- เพิ่มความหนืดในการล็อกมุมมองให้หันตามเป๊ะๆ
     bg.Name = "IYFlyGyro"
 end
 
@@ -142,7 +142,7 @@ local function stopFly()
         if hrp:FindFirstChild("IYFlyGyro") then hrp.IYFlyGyro:Destroy() end
     end
     
-    -- เปิดระบบอนิเมชันกลับมาให้เดินได้ตามปกติเมื่อปิดบิน
+    -- เปิดแอนิเมชันให้เดินขยับขาได้ปกติเมื่อปิดบิน
     if char and char:FindFirstChild("Animate") and oldAnimState ~= nil then
         char.Animate.Enabled = oldAnimState
     end
@@ -222,7 +222,7 @@ btn("🌀 วาร์ปกลับจุดที่เซ็ตไว้", U
 end)
 
 
--- ================= ฝั่งขวา (ระบบบินตามกล้อง) =================
+-- ================= ฝั่งขวา (ระบบบินตรงตามทิศกล้อง) =================
 
 -- ปุ่มเปิด/ปิด บิน
 btn("บิน (Fly): ปิดอยู่", UDim2.new(0.52, 0, 0.16, 0), 200, function(b)
@@ -257,7 +257,7 @@ FlySP.FocusLost:Connect(function()
 end)
 
 
--- ================= Loop ควบคุมการเคลื่อนที่ขยับตัวละคร =================
+-- ================= Loop ควบคุมการเคลื่อนที่และแก้แกนทิศทางมั่ว =================
 
 RS.Stepped:Connect(function() 
     if ncOn and lp.Character then 
@@ -279,16 +279,28 @@ RS.RenderStepped:Connect(function()
         local IYGyro = hrp and hrp:FindFirstChild("IYFlyGyro")
         
         if hrp and hum and IYVel and IYGyro then
-            -- ล็อกทิศทางการหันหน้าตัวละครและมุมเงยให้ตรงกับหน้าจอตลอดเวลา
+            -- ล็อกให้ตัวละครหันหน้าตรงตามกล้องมองตลอดเวลา
             IYGyro.CFrame = Camera.CFrame
             
-            -- ตรวจสอบปุ่ม Joystick บนหน้าจอมือถือ
+            -- ตรวจจับปุ่มกดเดิน
             local moveDir = hum.MoveDirection
             if moveDir.Magnitude > 0 then
-                -- คำนวณให้ทิศทางขยับตามทิศกล้องอย่างสมบูรณ์แบบ (หันไหนพุ่งไปทางนั้นตรงๆ)
-                IYVel.Velocity = (Camera.CFrame.LookVector * (moveDir.Z * -flySpeed)) + (Camera.CFrame.RightVector * (moveDir.X * flySpeed))
+                -- แก้ไขสูตรล็อกทิศทางใหม่: นำเอาเวกเตอร์ทิศทางปุ่มเดิน แปลงเข้าสู่ทิศทางกล้องโลก (World Space) ตรงๆ 
+                -- และปรับทิศทางลบแกน Z เพื่อให้กดดันเดินหน้าแล้วตัวพุ่งตรงไปข้างหน้ากล้องทันที หันขึ้นบินขึ้น หันลงบินลง
+                local direction = Camera.CFrame:VectorToWorldSpace(Vector3.new(moveDir.X, 0, moveDir.Z))
+                
+                -- ตรวจสอบหากเป็นการกดดันเดินไปด้านหน้า (Z น้อยกว่า 0) ให้พุ่งไปตาม LookVector ของกล้องตรงๆ
+                if hum.MoveDirection.Z < 0 then
+                    IYVel.Velocity = Camera.CFrame.LookVector * flySpeed
+                elseif hum.MoveDirection.Z > 0 then
+                    -- กดถอยหลัง ให้พุ่งถอยจากทิศกล้องตรงๆ
+                    IYVel.Velocity = Camera.CFrame.LookVector * -flySpeed
+                else
+                    -- บินสไลด์ข้างซ้าย-ขวา ตามองศากล้องปัจจุบัน
+                    IYVel.Velocity = direction * flySpeed
+                end
             else
-                -- ถ้าไม่ได้ดันปุ่มเดิน ให้ลอยอยู่กับที่ในท่าตรงนิ่งๆ
+                -- ถ้าไม่ได้กดเดินให้ลอยตัวตรงล็อกท่านิ่งอยู่กับที่
                 IYVel.Velocity = Vector3.new(0, 0, 0)
             end
         end

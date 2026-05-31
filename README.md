@@ -1,4 +1,4 @@
--- [[ Buu Hub v7.6 - Thaiban (Mobile Fly Edition) ]] --
+-- [[ Buu Hub v7.6 - Thaiban (Mobile Fly + Speed Box Edition) ]] --
 local P = game:GetService("Players")
 local TS = game:GetService("TweenService")
 local RS = game:GetService("RunService")
@@ -7,7 +7,7 @@ local lp = P.LocalPlayer
 
 local fOn, ncOn, savedCF = false, false, nil
 local flyOn = false
-local flySpeed = 50 
+local flySpeed = 50 -- ความเร็วบินเริ่มต้น
 local Camera = workspace.CurrentCamera
 
 local TreePos = {
@@ -42,13 +42,23 @@ local SG = Instance.new("ScreenGui", targetGui)
 SG.Name = "BuuHub_Short"
 SG.ResetOnSpawn = false
 
--- หน้าต่างหลัก
+-- หน้าต่างหลัก (ขยายกว้าง 450 เพื่อแบ่ง 2 ฝั่งให้ชัดเจนและจิ้มง่ายบนมือถือ)
 local MF = Instance.new("Frame", SG)
-MF.Size = UDim2.new(0, 450, 0, 250)
-MF.Position = UDim2.new(0.5, -225, 0.5, -125)
+MF.Size = UDim2.new(0, 450, 0, 310)
+MF.Position = UDim2.new(0.5, -225, 0.5, -155)
 MF.BackgroundColor3 = Color3.fromRGB(15,15,15)
 MF.BackgroundTransparency = 0.2
 Instance.new("UICorner", MF).CornerRadius = UDim.new(0, 10)
+
+local TL = Instance.new("TextLabel", MF)
+TL.Size = UDim2.new(1, -50, 0, 35)
+TL.Position = UDim2.new(0, 15, 0, 5)
+TL.Text = "BUUHUB" -- แก้ไขชื่อหน้า UI เรียบร้อย
+TL.TextColor3 = Color3.fromRGB(255,255,255)
+TL.TextSize = 20
+TL.Font = 4
+TL.BackgroundTransparency = 1
+TL.TextXAlignment = 0
 
 local CB = Instance.new("TextButton", MF)
 CB.Text = "✕"
@@ -80,63 +90,205 @@ local function btn(txt, pos, sizeX, c)
     return B
 end
 
--- ระบบ Fly Infinity Yield
-local function startFly()
-    local hrp = lp.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    local bv = Instance.new("BodyVelocity", hrp); bv.Name = "FlyVel"; bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge); bv.Velocity = Vector3.zero
-    local bg = Instance.new("BodyGyro", hrp); bg.Name = "FlyGyro"; bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge); bg.P = 10000; bg.CFrame = hrp.CFrame
-    
-    RS.RenderStepped:Connect(function()
-        if not flyOn then return end
-        bg.CFrame = Camera.CFrame
-        local move = lp.Character.Humanoid.MoveDirection
-        bv.Velocity = (Camera.CFrame.LookVector * (move.Z * flySpeed)) + (Camera.CFrame.RightVector * (move.X * flySpeed))
-    end)
+local function walk(pos)
+    local char = lp.Character or lp.CharacterAdded:Wait()
+    local rp = char:WaitForChild("HumanoidRootPart")
+    local t = TS:Create(rp, TweenInfo.new((rp.Position - pos).Magnitude / 16, Enum.EasingStyle.Linear), {CFrame = CFrame.new(pos)})
+    t:Play() 
+    t.Completed:Wait() 
+    task.wait(0.5)
 end
 
+-- ฟังก์ชันเริ่มบินสไตล์ Infinity Yield (ล็อกตัวตรง บินตามหน้าจอ)
+local function startFly()
+    local char = lp.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    -- สร้างแรงยกและล็อกตัวละครให้นิ่งตรงสไตล์ IY
+    local bv = Instance.new("BodyVelocity", hrp)
+    bv.Velocity = Vector3.new(0, 0, 0)
+    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bv.Name = "IYFlyVelocity"
+
+    local bg = Instance.new("BodyGyro", hrp)
+    bg.CFrame = hrp.CFrame
+    bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    bg.P = 10000
+    bg.Name = "IYFlyGyro"
+end
+
+-- ฟังก์ชันยกเลิกการบิน
 local function stopFly()
     if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-        for _, v in pairs(lp.Character.HumanoidRootPart:GetChildren()) do if v.Name == "FlyVel" or v.Name == "FlyGyro" then v:Destroy() end end
+        local hrp = lp.Character.HumanoidRootPart
+        if hrp:FindFirstChild("IYFlyVelocity") then hrp.IYFlyVelocity:Destroy() end
+        if hrp:FindFirstChild("IYFlyGyro") then hrp.IYFlyGyro:Destroy() end
     end
 end
 
--- ปุ่มต่างๆ
-btn("ตัดไม้ออโต้: ปิดอยู่", UDim2.new(0.04, 0, 0.20, 0), 200, function(b)
-    fOn = not fOn
+-- ================= ฝั่งซ้าย (ฟังก์ชันเดิมของคุณ) =================
+
+btn("ตัดไม้ออโต้: ปิดอยู่", UDim2.new(0.04, 0, 0.16, 0), 200, function(b)
+    fOn = not fOn 
     setUI(b, fOn and "ตัดไม้ออโต้: เปิดอยู่" or "ตัดไม้ออโต้: ปิดอยู่", fOn and Color3.fromRGB(0,150,255) or Color3.fromRGB(200,200,200))
-    if fOn then task.spawn(function() while fOn do for _,p in ipairs(TreePos) do if not fOn then break end
-        local rp = lp.Character:FindFirstChild("HumanoidRootPart")
-        if rp then TS:Create(rp, TweenInfo.new((rp.Position-p).Magnitude/16), {CFrame=CFrame.new(p)}):Play(); task.wait((rp.Position-p).Magnitude/16 + 0.5) end
-        if fOn then for i=1,18 do VIM:SendMouseButtonEvent(0,0,0,true,game,1); task.wait(0.02); VIM:SendMouseButtonEvent(0,0,0,false,game,1); task.wait(0.5) end end
-    end task.wait(0.5) end end) end
+    if fOn then 
+        task.spawn(function() 
+            while fOn do 
+                for _, p in ipairs(TreePos) do 
+                    if not fOn then break end 
+                    walk(p) 
+                    if fOn then 
+                        for i=1,18 do 
+                            if not fOn then break end 
+                            VIM:SendMouseButtonEvent(0,0,0,true,game,1) 
+                            task.wait(0.02) 
+                            VIM:SendMouseButtonEvent(0,0,0,false,game,1) 
+                            task.wait(0.5) 
+                        end 
+                    end 
+                end 
+                task.wait(0.5) 
+            end 
+        end) 
+    end
 end)
 
-btn("ทะลุกำแพง: ปิดอยู่", UDim2.new(0.04, 0, 0.40, 0), 200, function(b)
-    ncOn = not ncOn
+btn("ทะลุกำแพง: ปิดอยู่", UDim2.new(0.04, 0, 0.32, 0), 200, function(b)
+    ncOn = not ncOn 
     setUI(b, ncOn and "ทะลุกำแพง: เปิดอยู่" or "ทะลุกำแพง: ปิดอยู่", ncOn and Color3.fromRGB(0,150,255) or Color3.fromRGB(200,200,200))
 end)
 
-btn("บิน (Fly): ปิดอยู่", UDim2.new(0.52, 0, 0.20, 0), 200, function(b)
+local SP = Instance.new("TextBox", MF)
+SP.Size = UDim2.new(0, 200, 0, 38)
+SP.Position = UDim2.new(0.04, 0, 0.48, 0)
+SP.BackgroundColor3 = Color3.fromRGB(30,30,30)
+SP.BackgroundTransparency = 0.3
+SP.PlaceholderText = "ใส่ความเร็วเดิน... (ปกติ 16)"
+SP.Text = ""
+SP.TextColor3 = Color3.fromRGB(0,150,255)
+SP.Font = 4
+SP.TextSize = 14
+Instance.new("UICorner", SP)
+
+SP.FocusLost:Connect(function() 
+    if tonumber(SP.Text) and lp.Character and lp.Character:FindFirstChild("Humanoid") then 
+        lp.Character.Humanoid.WalkSpeed = tonumber(SP.Text) 
+    end 
+end)
+
+btn("📍 บันทึกจุดพิกัดปัจจุบัน", UDim2.new(0.04, 0, 0.66, 0), 200, function(b)
+    if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then 
+        savedCF = lp.Character.HumanoidRootPart.CFrame 
+        b.Text = "✅ บันทึกจุดสำเร็จ!" 
+        b.TextColor3 = Color3.fromRGB(0,255,150) 
+        task.wait(1) 
+        b.Text = "📍 บันทึกจุดพิกัดปัจจุบัน" 
+        b.TextColor3 = Color3.fromRGB(255,215,0) 
+    end
+end)
+
+btn("🌀 วาร์ปกลับจุดที่เซ็ตไว้", UDim2.new(0.04, 0, 0.82, 0), 200, function(b)
+    if savedCF and lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then 
+        lp.Character.HumanoidRootPart.CFrame = savedCF 
+    else 
+        b.Text = "❌ ยังไม่ได้เซ็ตจุด!" 
+        b.TextColor3 = Color3.fromRGB(255,100,100) 
+        task.wait(1) 
+        b.Text = "🌀 วาร์ปกลับจุดที่เซ็ตไว้" 
+        b.TextColor3 = Color3.fromRGB(200,200,200) 
+    end
+end)
+
+
+-- ================= ฝั่งขวา (ระบบบินแบบ Infinity Yield) =================
+
+-- ปุ่มเปิด/ปิด บิน
+btn("บิน (Fly): ปิดอยู่", UDim2.new(0.52, 0, 0.16, 0), 200, function(b)
     flyOn = not flyOn
     setUI(b, flyOn and "บิน (Fly): เปิดอยู่" or "บิน (Fly): ปิดอยู่", flyOn and Color3.fromRGB(0,150,255) or Color3.fromRGB(200,200,200))
-    if flyOn then startFly() else stopFly() end
+    if flyOn then
+        startFly()
+    else
+        stopFly()
+    end
 end)
 
+-- ช่องใส่ค่าความเร็วในการบิน
 local FlySP = Instance.new("TextBox", MF)
-FlySP.Size = UDim2.new(0, 200, 0, 38); FlySP.Position = UDim2.new(0.52, 0, 0.40, 0)
-FlySP.PlaceholderText = "ความเร็วบิน (ปกติ 20)"; FlySP.Text = "20"; FlySP.BackgroundColor3 = Color3.fromRGB(30,30,30)
+FlySP.Size = UDim2.new(0, 200, 0, 38)
+FlySP.Position = UDim2.new(0.52, 0, 0.32, 0)
+FlySP.BackgroundColor3 = Color3.fromRGB(30,30,30)
+FlySP.BackgroundTransparency = 0.3
+FlySP.PlaceholderText = "ใส่ความเร็วบิน... (ปกติ 50)"
+FlySP.Text = "50"
+FlySP.TextColor3 = Color3.fromRGB(0,255,150)
+FlySP.Font = 4
+FlySP.TextSize = 14
 Instance.new("UICorner", FlySP)
-FlySP.FocusLost:Connect(function() flySpeed = tonumber(FlySP.Text) or 50 end)
 
--- ลูป Noclip
-RS.Stepped:Connect(function()
-    if (ncOn or flyOn) and lp.Character then for _,p in ipairs(lp.Character:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = false end end end
+FlySP.FocusLost:Connect(function()
+    if tonumber(FlySP.Text) then
+        flySpeed = tonumber(FlySP.Text)
+    else
+        FlySP.Text = tostring(flySpeed) 
+    end
 end)
 
--- ปุ่มเปิดปิด UI
+-- (ลบปุ่ม บินขึ้น / บินลง ออกให้เรียบร้อยตามคำขอเพื่อปล่อยให้พื้นที่โล่งขึ้น)
+
+
+-- ================= Loop ควบคุมตัวละคร =================
+
+RS.Stepped:Connect(function() 
+    if ncOn and lp.Character then 
+        for _, p in ipairs(lp.Character:GetDescendants()) do 
+            if p:IsA("BasePart") then p.CanCollide = false end 
+        end 
+    elseif flyOn and lp.Character then
+        local hrp = lp.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then hrp.CanCollide = false end 
+    end 
+end)
+
+RS.RenderStepped:Connect(function()
+    if flyOn and lp.Character then
+        local hrp = lp.Character:FindFirstChild("HumanoidRootPart")
+        local hum = lp.Character:FindFirstChild("Humanoid")
+        
+        -- ดึงพาร์ทคำสั่งล็อกทิศทางแบบ Infinity Yield
+        local IYVel = hrp and hrp:FindFirstChild("IYFlyVelocity")
+        local IYGyro = hrp and hrp:FindFirstChild("IYFlyGyro")
+        
+        if hrp and hum and IYVel and IYGyro then
+            -- ล็อกมุมหันของตัวละครให้ตรงตามทิศทางมุมกล้องหน้าจอเสมือนจริง
+            IYGyro.CFrame = Camera.CFrame
+            
+            -- ตรวจจับทิศทางการขยับจากปุ่มเดิน (Joystick) บนหน้าจอ
+            local moveDir = hum.MoveDirection
+            if moveDir.Magnitude > 0 then
+                -- บินอิสระตามหน้าจอ ก้มหน้าจอลงจะบินลง เงยหน้าจอขึ้นจะบินขึ้นทันที
+                IYVel.Velocity = (Camera.CFrame.LookVector * (moveDir.Z * -flySpeed)) + (Camera.CFrame.RightVector * (moveDir.X * flySpeed))
+            else
+                -- ถ้าไม่ได้กดเดินให้ลอยนิ่งอยู่กับที่
+                IYVel.Velocity = Vector3.new(0, 0, 0)
+            end
+        end
+    end
+end)
+
+
+-- ================= ปุ่มย่อเปิด/ปิด UI หลัก =================
 local RB = Instance.new("TextButton", SG)
-RB.Size = UDim2.new(0, 50, 0, 50); RB.Position = UDim2.new(0.05, 0, 0.05, 0)
-RB.BackgroundColor3 = Color3.fromRGB(20,20,20); RB.Text = "Buu"; RB.TextColor3 = Color3.fromRGB(0,150,255); RB.Draggable = true
+RB.Size = UDim2.new(0, 50, 0, 50)
+RB.Position = UDim2.new(0.05, 0, 0.05, 0)
+RB.BackgroundColor3 = Color3.fromRGB(20,20,20)
+RB.BackgroundTransparency = 0.3
+RB.Text = "Buu"
+RB.TextColor3 = Color3.fromRGB(0,150,255)
+RB.Font = 4
+RB.TextSize = 16
+RB.Draggable = true
 Instance.new("UICorner", RB).CornerRadius = UDim.new(0,25)
 RB.MouseButton1Click:Connect(function() MF.Visible = not MF.Visible end)

@@ -7,7 +7,7 @@ local lp = P.LocalPlayer
 
 local fOn, ncOn, savedCF = false, false, nil
 local flyOn = false
-local flySpeed = 50 -- ความเร็วบินเริ่มต้น
+local flySpeed = 30 -- ความเร็วบินเริ่มต้น
 local Camera = workspace.CurrentCamera
 
 local TreePos = {
@@ -53,7 +53,7 @@ Instance.new("UICorner", MF).CornerRadius = UDim.new(0, 10)
 local TL = Instance.new("TextLabel", MF)
 TL.Size = UDim2.new(1, -50, 0, 35)
 TL.Position = UDim2.new(0, 15, 0, 5)
-TL.Text = "BUUHUB" -- แก้ไขชื่อหน้า UI เรียบร้อย
+TL.Text = "BUUHUB" 
 TL.TextColor3 = Color3.fromRGB(255,255,255)
 TL.TextSize = 20
 TL.Font = 4
@@ -99,14 +99,29 @@ local function walk(pos)
     task.wait(0.5)
 end
 
--- ฟังก์ชันเริ่มบินสไตล์ Infinity Yield (ล็อกตัวตรง บินตามหน้าจอ)
+-- ================= ระบบล็อกอนิเมชัน / ล็อกท่าทาง (Infinity Yield ของแท้) =================
+local oldAnimState = nil
+
 local function startFly()
     local char = lp.Character
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
+    local hum = char:FindFirstChild("Humanoid")
+    if not hrp or not hum then return end
 
-    -- สร้างแรงยกและล็อกตัวละครให้นิ่งตรงสไตล์ IY
+    -- ล็อกท่าเดิน: ปิดการทำงานสคริปต์อนิเมชันเดิมเพื่อไม่ให้แขนขาสะบัดตอนบิน
+    local animateScript = char:FindFirstChild("Animate")
+    if animateScript then
+        oldAnimState = animateScript.Enabled
+        animateScript.Enabled = false
+    end
+    
+    -- เคลียร์อนิเมชันเก่าๆ ที่ค้างอยู่ให้หยุดเล่นทั้งหมด (ตัวจะนิ่งตรง)
+    for _, track in ipairs(hum:GetPlayingAnimationTracks()) do
+        track:Stop()
+    end
+
+    -- สร้างแรงยกตัวและล็อกมุมตัวละครให้ตั้งตรงสไตล์ IY
     local bv = Instance.new("BodyVelocity", hrp)
     bv.Velocity = Vector3.new(0, 0, 0)
     bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
@@ -119,12 +134,17 @@ local function startFly()
     bg.Name = "IYFlyGyro"
 end
 
--- ฟังก์ชันยกเลิกการบิน
 local function stopFly()
-    if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-        local hrp = lp.Character.HumanoidRootPart
+    local char = lp.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        local hrp = char.HumanoidRootPart
         if hrp:FindFirstChild("IYFlyVelocity") then hrp.IYFlyVelocity:Destroy() end
         if hrp:FindFirstChild("IYFlyGyro") then hrp.IYFlyGyro:Destroy() end
+    end
+    
+    -- เปิดระบบอนิเมชันกลับมาให้เดินได้ตามปกติเมื่อปิดบิน
+    if char and char:FindFirstChild("Animate") and oldAnimState ~= nil then
+        char.Animate.Enabled = oldAnimState
     end
 end
 
@@ -202,7 +222,7 @@ btn("🌀 วาร์ปกลับจุดที่เซ็ตไว้", U
 end)
 
 
--- ================= ฝั่งขวา (ระบบบินแบบ Infinity Yield) =================
+-- ================= ฝั่งขวา (ระบบบินตามกล้อง) =================
 
 -- ปุ่มเปิด/ปิด บิน
 btn("บิน (Fly): ปิดอยู่", UDim2.new(0.52, 0, 0.16, 0), 200, function(b)
@@ -221,8 +241,8 @@ FlySP.Size = UDim2.new(0, 200, 0, 38)
 FlySP.Position = UDim2.new(0.52, 0, 0.32, 0)
 FlySP.BackgroundColor3 = Color3.fromRGB(30,30,30)
 FlySP.BackgroundTransparency = 0.3
-FlySP.PlaceholderText = "ใส่ความเร็วบิน... (ปกติ 50)"
-FlySP.Text = "50"
+FlySP.PlaceholderText = "ใส่ความเร็วบิน... (ปกติ 30)"
+FlySP.Text = "30"
 FlySP.TextColor3 = Color3.fromRGB(0,255,150)
 FlySP.Font = 4
 FlySP.TextSize = 14
@@ -236,10 +256,8 @@ FlySP.FocusLost:Connect(function()
     end
 end)
 
--- (ลบปุ่ม บินขึ้น / บินลง ออกให้เรียบร้อยตามคำขอเพื่อปล่อยให้พื้นที่โล่งขึ้น)
 
-
--- ================= Loop ควบคุมตัวละคร =================
+-- ================= Loop ควบคุมการเคลื่อนที่ขยับตัวละคร =================
 
 RS.Stepped:Connect(function() 
     if ncOn and lp.Character then 
@@ -257,21 +275,20 @@ RS.RenderStepped:Connect(function()
         local hrp = lp.Character:FindFirstChild("HumanoidRootPart")
         local hum = lp.Character:FindFirstChild("Humanoid")
         
-        -- ดึงพาร์ทคำสั่งล็อกทิศทางแบบ Infinity Yield
         local IYVel = hrp and hrp:FindFirstChild("IYFlyVelocity")
         local IYGyro = hrp and hrp:FindFirstChild("IYFlyGyro")
         
         if hrp and hum and IYVel and IYGyro then
-            -- ล็อกมุมหันของตัวละครให้ตรงตามทิศทางมุมกล้องหน้าจอเสมือนจริง
+            -- ล็อกทิศทางการหันหน้าตัวละครและมุมเงยให้ตรงกับหน้าจอตลอดเวลา
             IYGyro.CFrame = Camera.CFrame
             
-            -- ตรวจจับทิศทางการขยับจากปุ่มเดิน (Joystick) บนหน้าจอ
+            -- ตรวจสอบปุ่ม Joystick บนหน้าจอมือถือ
             local moveDir = hum.MoveDirection
             if moveDir.Magnitude > 0 then
-                -- บินอิสระตามหน้าจอ ก้มหน้าจอลงจะบินลง เงยหน้าจอขึ้นจะบินขึ้นทันที
+                -- คำนวณให้ทิศทางขยับตามทิศกล้องอย่างสมบูรณ์แบบ (หันไหนพุ่งไปทางนั้นตรงๆ)
                 IYVel.Velocity = (Camera.CFrame.LookVector * (moveDir.Z * -flySpeed)) + (Camera.CFrame.RightVector * (moveDir.X * flySpeed))
             else
-                -- ถ้าไม่ได้กดเดินให้ลอยนิ่งอยู่กับที่
+                -- ถ้าไม่ได้ดันปุ่มเดิน ให้ลอยอยู่กับที่ในท่าตรงนิ่งๆ
                 IYVel.Velocity = Vector3.new(0, 0, 0)
             end
         end
